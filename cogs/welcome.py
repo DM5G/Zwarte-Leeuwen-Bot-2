@@ -102,7 +102,8 @@ class Welcome(commands.Cog):
                     avatar = Image.open(io.BytesIO(avatar_data)).convert("RGBA")
 
             # Resize avatar and create circular mask
-            avatar = avatar.resize((200, 200))
+            avatar_size = 350
+            avatar = avatar.resize((avatar_size, avatar_size))
             mask = Image.new("L", avatar.size, 0)
             draw = ImageDraw.Draw(mask)
             draw.ellipse((0, 0) + avatar.size, fill=255)
@@ -111,29 +112,54 @@ class Welcome(commands.Cog):
             circular_avatar = ImageOps.fit(avatar, mask.size, centering=(0.5, 0.5))
             circular_avatar.putalpha(mask)
 
+            # Add white border ring
+            border_width = 8
+            bordered_size = avatar_size + (border_width * 2)
+            bordered_avatar = Image.new("RGBA", (bordered_size, bordered_size), (0, 0, 0, 0))
+            border_draw = ImageDraw.Draw(bordered_avatar)
+            border_draw.ellipse((0, 0, bordered_size, bordered_size), fill=(255, 255, 255, 255))
+            bordered_avatar.paste(circular_avatar, (border_width, border_width), circular_avatar)
+
             # Paste avatar center horizontally, somewhat top vertically
             banner_w, banner_h = banner.size
-            avatar_w, avatar_h = circular_avatar.size
-            offset = ((banner_w - avatar_w) // 2, (banner_h - avatar_h) // 2 - 30)
+            avatar_w, avatar_h = bordered_avatar.size
+            offset = ((banner_w - avatar_w) // 2, (banner_h - avatar_h) // 2 - 80)
             
-            banner.paste(circular_avatar, offset, circular_avatar)
+            banner.paste(bordered_avatar, offset, bordered_avatar)
 
-            # Draw username
+            # Draw "BIENVENID@" text and username
             draw = ImageDraw.Draw(banner)
             try:
                 # Try to load a generic font, or use default if not available
-                font = ImageFont.truetype("arial.ttf", 45)
+                font_title = ImageFont.truetype("arialbd.ttf", 85) # Bold arial if possible
+                font_name = ImageFont.truetype("arial.ttf", 55)
             except IOError:
-                font = ImageFont.load_default()
+                try:
+                    font_title = ImageFont.truetype("arial.ttf", 85)
+                    font_name = ImageFont.truetype("arial.ttf", 55)
+                except IOError:
+                    font_title = ImageFont.load_default()
+                    font_name = ImageFont.load_default()
 
-            # Using textbbox to center text
-            bbox = draw.textbbox((0, 0), username, font=font)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
-            text_x = (banner_w - text_w) / 2
-            text_y = offset[1] + avatar_h + 20
+            # Using textbbox to center title
+            title_text = "BIENVENID@"
+            bbox_title = draw.textbbox((0, 0), title_text, font=font_title)
+            text_w_title = bbox_title[2] - bbox_title[0]
+            text_h_title = bbox_title[3] - bbox_title[1]
+            text_x_title = (banner_w - text_w_title) / 2
+            text_y_title = offset[1] + avatar_h + 20
 
-            draw.text((text_x, text_y), username, font=font, fill=(255, 255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
+            draw.text((text_x_title, text_y_title), title_text, font=font_title, fill=(255, 255, 255, 255), stroke_width=4, stroke_fill=(0, 0, 0))
+
+            # Using textbbox to center username
+            username_text = username.upper()
+            bbox_name = draw.textbbox((0, 0), username_text, font=font_name)
+            text_w_name = bbox_name[2] - bbox_name[0]
+            text_h_name = bbox_name[3] - bbox_name[1]
+            text_x_name = (banner_w - text_w_name) / 2
+            text_y_name = text_y_title + text_h_title + 15
+
+            draw.text((text_x_name, text_y_name), username_text, font=font_name, fill=(255, 255, 255, 255), stroke_width=3, stroke_fill=(0, 0, 0))
 
             output = io.BytesIO()
             # Convert to RGB to save as PNG properly without issues if banner didn't have alpha
