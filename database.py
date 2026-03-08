@@ -52,6 +52,20 @@ def init_db():
             reason TEXT
         )
     ''')
+
+    # --- Activities System ---
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS activities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER,
+            channel_id INTEGER,
+            name TEXT,
+            description TEXT,
+            action_time TEXT,
+            days TEXT,
+            banner_url TEXT
+        )
+    ''')
     
     conn.commit()
     conn.close()
